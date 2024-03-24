@@ -9,40 +9,52 @@
 
 #define OUTPUT_FILE "/tmp/qruntmp"
 
-class parsing_error: public std::exception
-{
-  virtual const char* what() const throw()
-  {
+class parsing_error: public std::exception {
+  virtual const char* what() const throw() {
     return "Could not parse file.";
   }
 } parsing_error;
 
-std::string preprocess_line(const std::string &line) {
+class QuickrunContext {
+public:
+  std::string output_file;
+  std::string input_file;
+  std::string line;
+  std::string command;
+};
+
+void preprocess_line(QuickrunContext &context) {
   std::string final_command {};
 
-  for (int i=0;i<static_cast<int>(line.length());i++) {
-    if (line[i] == '%' && line[i+1] == '%') {
-      i += 1;
-      final_command += OUTPUT_FILE;
+  for (int i=0;i<static_cast<int>(context.line.length());i++) {
+    if (context.line.substr(i, 3) == "%O%") {
+      i += 2;
+      final_command += context.output_file;
       continue;
     }
 
-    final_command += line[i];
+    if (context.line.substr(i, 3) == "%I%") {
+      i += 2;
+      final_command += context.input_file;
+      continue;
+    }
+
+    final_command += context.line[i];
   }
 
-  return final_command;
+  context.line = final_command;
 }
 
-std::string parse_line(const std::string &line) {
+void parse_line(QuickrunContext &context) {
   std::string final_command {};
 
   bool found_comment { false };
   bool command_started { false };
-  for (int i=0;i<static_cast<int>(line.length());i++) {
-    if (line[i] == ' ' && command_started == false)
+  for (int i=0;i<static_cast<int>(context.line.length());i++) {
+    if (context.line[i] == ' ' && command_started == false)
       continue;
     
-    final_command += line[i];
+    final_command += context.line[i];
 
     if (final_command == "\/\/") {
       final_command = "";
@@ -54,7 +66,7 @@ std::string parse_line(const std::string &line) {
   if (found_comment == false)
     throw parsing_error;
 
-  return final_command;
+  context.command = final_command;
 }
 
 int main(int argc, char* argv[]) {
@@ -75,22 +87,24 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::string first_line{};
-  std::getline(file, first_line);
+  QuickrunContext context;
+  context.output_file = OUTPUT_FILE;
+  context.input_file = path;
+  std::getline(file, context.line);
+  context.command = "";
   
-  std::string command{};
-  first_line = preprocess_line(first_line);
+  preprocess_line(context);
   
   try {
-    command = parse_line(first_line);
+    parse_line(context);
   } catch (std::exception& e) {
     std::cout << e.what() << "\n";
     return 1;
   }
 
-  std::system(command.c_str());
+  std::system(context.command.c_str());
 
-  std::system(OUTPUT_FILE);
+  std::system(context.output_file.c_str());
   
   return 0;
 }
