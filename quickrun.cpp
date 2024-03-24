@@ -4,22 +4,57 @@
 #include <string_view>
 #include <filesystem>
 #include <cstdlib>
+#include <exception>
+#include <vector>
 
-bool validate_line(const std::string &line) {
-  // line is invalid if empty
-  if (line == "")
-    return false;
+#define OUTPUT_FILE "/tmp/qruntmp"
 
-  // line is invalid if doesn't start with comment.
-  if (line.rfind("//", 0)) {
-    return false;
+class parsing_error: public std::exception
+{
+  virtual const char* what() const throw()
+  {
+    return "Could not parse file.";
   }
-  
-  return true;
+} parsing_error;
+
+std::string preprocess_line(const std::string &line) {
+  std::string final_command {};
+
+  for (int i=0;i<static_cast<int>(line.length());i++) {
+    if (line[i] == '%' && line[i+1] == '%') {
+      i += 1;
+      final_command += OUTPUT_FILE;
+      continue;
+    }
+
+    final_command += line[i];
+  }
+
+  return final_command;
 }
 
-std::string remove_line_comments(const std::string &line) {
-  return line.substr(2);
+std::string parse_line(const std::string &line) {
+  std::string final_command {};
+
+  bool found_comment { false };
+  bool command_started { false };
+  for (int i=0;i<static_cast<int>(line.length());i++) {
+    if (line[i] == ' ' && command_started == false)
+      continue;
+    
+    final_command += line[i];
+
+    if (final_command == "\/\/") {
+      final_command = "";
+      found_comment = true;
+      command_started = true;
+    }
+  }
+
+  if (found_comment == false)
+    throw parsing_error;
+
+  return final_command;
 }
 
 int main(int argc, char* argv[]) {
@@ -43,18 +78,19 @@ int main(int argc, char* argv[]) {
   std::string first_line{};
   std::getline(file, first_line);
   
-  if (!validate_line(first_line)) {
-    std::cerr << "Error: File could not be quickrunned.\n";
+  std::string command{};
+  first_line = preprocess_line(first_line);
+  
+  try {
+    command = parse_line(first_line);
+  } catch (std::exception& e) {
+    std::cout << e.what() << "\n";
     return 1;
   }
 
-  first_line = remove_line_comments(first_line);
+  std::system(command.c_str());
 
-  std::string final_command { first_line + " -o /tmp/qruntmp" };
-
-  std::system(final_command.c_str());
-
-  std::system("/tmp/qruntmp");
+  std::system(OUTPUT_FILE);
   
   return 0;
 }
