@@ -34,4 +34,4 @@ $ sudo cp ./bin/qrun /usr/bin
    You need to make the compiler output this, because it is the file that
    qrun executes after running your command.
  - ```%I%``` : Get replaced with the name of the file. Allows you to rename the
-   file without having to change the qrun command.%    
+   file without having to change the qrun command.
