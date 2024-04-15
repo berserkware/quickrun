@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <exception>
 #include <vector>
+#include <cstring>
 
 #define OUTPUT_FILE "/tmp/qruntmp"
 
@@ -56,6 +57,7 @@ void parse_line(QuickrunContext &context) {
     
     final_command += context.line[i];
 
+    // checks if is comment
     if (final_command == "\/\/") {
       final_command = "";
       found_comment = true;
@@ -74,7 +76,15 @@ int main(int argc, char* argv[]) {
   if (argc == 1) {
     std::cout << "Quickrun v0.1.0 by Berserkware\n\n";
     std::cout << "Quickrun a file by passing the filepath to this program.\n\n";
-    std::cout << "Add Quickrun support to a file by adding a comment at the \nvery beginning of the file that contains the command to \nrun the file\n";
+    std::cout << "Add Quickrun to a file by adding a comment at the start"
+      "\nof the file that contains the command to compile the program.\n";
+
+    std::cout << "\nPreprocessor Options:"
+      "\n - %O% : Gets replaced with a automatic output file (usually in /tmp)."
+      "\n   You need to make the compiler output this, because it is the file that"
+      "\n   qrun executes after running your command."
+      "\n - %I% : Get replaced with the name of the file. Allows you to rename the"
+      "\n   file without having to change the qrun command.";
     return 0;
   }
 
@@ -101,10 +111,18 @@ int main(int argc, char* argv[]) {
     std::cout << e.what() << "\n";
     return 1;
   }
-
+  
   std::system(context.command.c_str());
 
-  std::system(context.output_file.c_str());
+  // adds the args to the command
+  std::string final_command {};
+  final_command += context.output_file.c_str();
+  for (int i = 2; i < argc; i++) {
+    final_command += " ";
+    final_command += argv[i];
+  }
+
+  std::system(final_command.c_str());
   
   return 0;
 }
