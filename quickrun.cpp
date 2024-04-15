@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
       "\n   You need to make the compiler output this, because it is the file that"
       "\n   qrun executes after running your command."
       "\n - %I% : Get replaced with the name of the file. Allows you to rename the"
-      "\n   file without having to change the qrun command.";
+      "\n   file without having to change the qrun command.\n";
     return 0;
   }
 
